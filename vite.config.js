@@ -8,7 +8,10 @@ const DEFAULT = { groups: [], bank: [], history: [], players: [], scoreHistory: 
 
 function readData() {
   try {
-    if (!existsSync(DATA_FILE)) return { ...DEFAULT }
+    if (!existsSync(DATA_FILE)) {
+      writeFileSync(DATA_FILE, JSON.stringify(DEFAULT, null, 2), 'utf-8')
+      return { ...DEFAULT }
+    }
     return { ...DEFAULT, ...JSON.parse(readFileSync(DATA_FILE, 'utf-8')) }
   } catch {
     return { ...DEFAULT }
