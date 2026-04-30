@@ -16,14 +16,24 @@ export const useGroupsStore = defineStore('groups', () => {
     })
   }
 
-  function addGroup(name) {
-    groups.value.push({ id: uid(), name: name.trim() })
+  function addGroup({ name, leader, leaderNo }) {
+    groups.value.push({
+      id: uid(),
+      name: name.trim(),
+      leader: (leader || '').trim(),
+      leaderNo: (leaderNo || '').trim(),
+    })
     sync()
   }
 
-  function editGroup(id, name) {
+  function editGroup(id, { name, leader, leaderNo }) {
     const g = groups.value.find(g => g.id === id)
-    if (g) { g.name = name.trim(); sync() }
+    if (g) {
+      g.name = name.trim()
+      g.leader = (leader || '').trim()
+      g.leaderNo = (leaderNo || '').trim()
+      sync()
+    }
   }
 
   function deleteGroup(id) {

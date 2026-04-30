@@ -4,6 +4,10 @@
     <div v-if="store.groups.length > 0" class="current-card">
       <div class="current-label">本轮出题组</div>
       <div class="current-name">{{ store.groups[0].name }}</div>
+      <div v-if="store.groups[0].leader" class="current-leader">
+        负责人：{{ store.groups[0].leader }}
+        <span v-if="store.groups[0].leaderNo">（{{ store.groups[0].leaderNo }}）</span>
+      </div>
       <div class="current-actions">
         <el-button type="primary" size="large" @click="handleMarkDone">
           已出题，移至末位
@@ -30,6 +34,8 @@
         </template>
       </el-table-column>
       <el-table-column prop="name" label="组名" />
+      <el-table-column prop="leader" label="负责人" width="120" />
+      <el-table-column prop="leaderNo" label="负责人工号" width="130" />
       <el-table-column label="操作" width="160" align="center">
         <template #default="{ row }">
           <el-button size="small" :icon="Edit" @click="openEdit(row)">编辑</el-button>
@@ -39,14 +45,23 @@
     </el-table>
 
     <!-- Add Dialog -->
-    <el-dialog v-model="showAddDialog" title="添加组" width="420px" align-center>
-      <el-input
-        v-model="newGroupName"
-        placeholder="请输入组名"
-        size="large"
-        @keyup.enter="submitAdd"
-        autofocus
-      />
+    <el-dialog v-model="showAddDialog" title="添加组" width="480px" align-center @closed="resetAddForm">
+      <el-form label-width="100px">
+        <el-form-item label="组名" required>
+          <el-input
+            v-model="newGroupName"
+            placeholder="请输入组名"
+            @keyup.enter="submitAdd"
+            autofocus
+          />
+        </el-form-item>
+        <el-form-item label="负责人">
+          <el-input v-model="newLeader" placeholder="请输入负责人姓名" />
+        </el-form-item>
+        <el-form-item label="负责人工号">
+          <el-input v-model="newLeaderNo" placeholder="请输入负责人工号" />
+        </el-form-item>
+      </el-form>
       <template #footer>
         <el-button @click="showAddDialog = false">取消</el-button>
         <el-button type="primary" @click="submitAdd">确认添加</el-button>
@@ -54,13 +69,22 @@
     </el-dialog>
 
     <!-- Edit Dialog -->
-    <el-dialog v-model="showEditDialog" title="编辑组名" width="420px" align-center>
-      <el-input
-        v-model="editName"
-        placeholder="请输入组名"
-        size="large"
-        @keyup.enter="submitEdit"
-      />
+    <el-dialog v-model="showEditDialog" title="编辑组" width="480px" align-center>
+      <el-form label-width="100px">
+        <el-form-item label="组名" required>
+          <el-input
+            v-model="editName"
+            placeholder="请输入组名"
+            @keyup.enter="submitEdit"
+          />
+        </el-form-item>
+        <el-form-item label="负责人">
+          <el-input v-model="editLeader" placeholder="请输入负责人姓名" />
+        </el-form-item>
+        <el-form-item label="负责人工号">
+          <el-input v-model="editLeaderNo" placeholder="请输入负责人工号" />
+        </el-form-item>
+      </el-form>
       <template #footer>
         <el-button @click="showEditDialog = false">取消</el-button>
         <el-button type="primary" @click="submitEdit">保存</el-button>
@@ -80,10 +104,20 @@ const queueGroups = computed(() => store.groups.slice(1))
 
 const showAddDialog = ref(false)
 const newGroupName = ref('')
+const newLeader = ref('')
+const newLeaderNo = ref('')
 
 const showEditDialog = ref(false)
 const editName = ref('')
+const editLeader = ref('')
+const editLeaderNo = ref('')
 const editingId = ref(null)
+
+function resetAddForm() {
+  newGroupName.value = ''
+  newLeader.value = ''
+  newLeaderNo.value = ''
+}
 
 function handleMarkDone() {
   ElMessageBox.confirm(
@@ -98,21 +132,31 @@ function handleMarkDone() {
 
 function submitAdd() {
   if (!newGroupName.value.trim()) { ElMessage.warning('组名不能为空'); return }
-  store.addGroup(newGroupName.value)
+  store.addGroup({
+    name: newGroupName.value,
+    leader: newLeader.value,
+    leaderNo: newLeaderNo.value,
+  })
   ElMessage.success(`已添加「${newGroupName.value.trim()}」`)
-  newGroupName.value = ''
+  resetAddForm()
   showAddDialog.value = false
 }
 
 function openEdit(row) {
   editingId.value = row.id
   editName.value = row.name
+  editLeader.value = row.leader || ''
+  editLeaderNo.value = row.leaderNo || ''
   showEditDialog.value = true
 }
 
 function submitEdit() {
   if (!editName.value.trim()) { ElMessage.warning('组名不能为空'); return }
-  store.editGroup(editingId.value, editName.value)
+  store.editGroup(editingId.value, {
+    name: editName.value,
+    leader: editLeader.value,
+    leaderNo: editLeaderNo.value,
+  })
   showEditDialog.value = false
   ElMessage.success('修改成功')
 }
@@ -150,6 +194,12 @@ function handleDelete(row) {
   font-size: 32px;
   font-weight: 700;
   color: #1565c0;
+  margin-bottom: 8px;
+}
+
+.current-leader {
+  font-size: 14px;
+  color: #1976d2;
   margin-bottom: 20px;
 }
 
