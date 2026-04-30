@@ -13,7 +13,14 @@
       <el-table-column prop="employeeId" label="工号" width="130" />
       <el-table-column label="获得积分" width="110" align="center">
         <template #default="{ row }">
-          <el-tag type="success" style="font-weight: 600;">+{{ row.points }}</el-tag>
+          <el-tag v-if="row.points" type="success" style="font-weight: 600;">+{{ row.points }}</el-tag>
+          <span v-else style="color: #c0c4cc;">—</span>
+        </template>
+      </el-table-column>
+      <el-table-column label="出题次数" width="110" align="center">
+        <template #default="{ row }">
+          <el-tag v-if="row.questionCount" type="warning" style="font-weight: 600;">+{{ row.questionCount }}</el-tag>
+          <span v-else style="color: #c0c4cc;">—</span>
         </template>
       </el-table-column>
       <el-table-column label="日期" align="center">

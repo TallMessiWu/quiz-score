@@ -32,6 +32,11 @@
           <el-tag type="success" size="small">{{ row.answer }}</el-tag>
         </template>
       </el-table-column>
+      <el-table-column label="解析" min-width="180">
+        <template #default="{ row }">
+          <span class="explanation-text">{{ row.explanation || '—' }}</span>
+        </template>
+      </el-table-column>
       <el-table-column prop="creator" label="出题人" width="90" />
       <el-table-column prop="groupName" label="所属组" width="100" />
       <el-table-column label="操作" width="200" align="center">
@@ -62,6 +67,14 @@
         </el-form-item>
         <el-form-item label="答案">
           <el-input v-model="form.answer" placeholder="如：A  或  ABD" style="width: 200px;" />
+        </el-form-item>
+        <el-form-item label="解析">
+          <el-input
+            v-model="form.explanation"
+            type="textarea"
+            :rows="3"
+            placeholder="（选填）输入题目解析"
+          />
         </el-form-item>
         <el-form-item label="出题人">
           <el-input v-model="form.creator" placeholder="出题人姓名" style="width: 200px;" />
@@ -105,7 +118,7 @@ const showDialog = ref(false)
 const isEdit = ref(false)
 const editingId = ref(null)
 
-const defaultForm = () => ({ content: '', type: 'single', answer: '', creator: '', groupName: '' })
+const defaultForm = () => ({ content: '', type: 'single', answer: '', explanation: '', creator: '', groupName: '' })
 const form = reactive(defaultForm())
 
 function openAdd() {
@@ -121,6 +134,7 @@ function openEdit(row) {
     content: row.content,
     type: row.type,
     answer: row.answer,
+    explanation: row.explanation || '',
     creator: row.creator,
     groupName: row.groupName
   })
@@ -182,6 +196,14 @@ function copyText(text) {
 
 .question-text {
   flex: 1;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+.explanation-text {
+  font-size: 13px;
+  color: #606266;
   line-height: 1.6;
   white-space: pre-wrap;
   word-break: break-all;

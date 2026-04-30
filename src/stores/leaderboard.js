@@ -6,7 +6,11 @@ export const useLeaderboardStore = defineStore('leaderboard', () => {
   const scoreHistory = ref([])
 
   const sortedPlayers = computed(() =>
-    [...players.value].sort((a, b) => b.totalScore - a.totalScore)
+    [...players.value].sort((a, b) => {
+      const aTotal = a.totalScore + 5 * (a.questionCount || 0)
+      const bTotal = b.totalScore + 5 * (b.questionCount || 0)
+      return bTotal - aTotal
+    })
   )
 
   function init(data) {
@@ -22,26 +26,29 @@ export const useLeaderboardStore = defineStore('leaderboard', () => {
     })
   }
 
-  function addScore({ name, employeeId, points }) {
-    const pts = Number(points) || 1
+  function addScore({ name, employeeId, points, questionCount }) {
+    const pts = Number(points) || 0
+    const qc = Number(questionCount) || 0
     const existing = players.value.find(p => p.employeeId === employeeId.trim())
 
     if (existing) {
       const nameMismatch = name.trim() !== '' && existing.name !== name.trim()
       existing.totalScore += pts
+      existing.questionCount = (existing.questionCount || 0) + qc
       scoreHistory.value.unshift({
         id: uid(),
         playerId: existing.id,
         playerName: existing.name,
         employeeId: existing.employeeId,
         points: pts,
+        questionCount: qc,
         date: new Date().toISOString(),
       })
       sync()
       return { status: 'updated', nameMismatch, player: existing }
     }
 
-    const newPlayer = { id: uid(), name: name.trim(), employeeId: employeeId.trim(), totalScore: pts }
+    const newPlayer = { id: uid(), name: name.trim(), employeeId: employeeId.trim(), totalScore: pts, questionCount: qc }
     players.value.push(newPlayer)
     scoreHistory.value.unshift({
       id: uid(),
@@ -49,6 +56,7 @@ export const useLeaderboardStore = defineStore('leaderboard', () => {
       playerName: newPlayer.name,
       employeeId: newPlayer.employeeId,
       points: pts,
+      questionCount: qc,
       date: new Date().toISOString(),
     })
     sync()

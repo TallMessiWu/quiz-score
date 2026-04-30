@@ -20,10 +20,24 @@
       </el-table-column>
       <el-table-column prop="name" label="姓名" />
       <el-table-column prop="employeeId" label="工号" width="130" />
-      <el-table-column label="积分" width="100" align="center">
+      <el-table-column label="答题积分" width="100" align="center">
         <template #default="{ row }">
-          <el-tag type="success" size="large" style="font-size: 15px; font-weight: 700;">
+          <el-tag type="success" size="small" style="font-weight: 600;">
             {{ row.totalScore }}
+          </el-tag>
+        </template>
+      </el-table-column>
+      <el-table-column label="出题次数" width="100" align="center">
+        <template #default="{ row }">
+          <el-tag type="warning" size="small" style="font-weight: 600;">
+            {{ row.questionCount || 0 }}
+          </el-tag>
+        </template>
+      </el-table-column>
+      <el-table-column label="总得分" width="110" align="center">
+        <template #default="{ row }">
+          <el-tag type="danger" size="large" style="font-size: 15px; font-weight: 700;">
+            {{ row.totalScore + 5 * (row.questionCount || 0) }}
           </el-tag>
         </template>
       </el-table-column>
@@ -38,7 +52,7 @@
     <!-- Add Score Form -->
     <el-card class="score-form-card" shadow="never">
       <div class="score-form-title">添加 / 更新积分</div>
-      <div class="score-form-hint">以工号为唯一标识。工号已存在则累加积分；不存在则新增人员。</div>
+      <div class="score-form-hint">以工号为唯一标识。工号已存在则累加；不存在则新增人员。总得分 = 答题积分 + 5 × 出题次数</div>
       <div class="score-form-row">
         <el-form-item label="姓名" class="form-item">
           <el-input v-model="form.name" placeholder="请输入姓名" clearable />
@@ -46,8 +60,11 @@
         <el-form-item label="工号" class="form-item">
           <el-input v-model="form.employeeId" placeholder="请输入工号" clearable />
         </el-form-item>
-        <el-form-item label="积分" class="form-item-sm">
-          <el-input-number v-model="form.points" :min="1" :max="999" controls-position="right" />
+        <el-form-item label="答题积分" class="form-item-sm">
+          <el-input-number v-model="form.points" :min="0" :max="999" controls-position="right" />
+        </el-form-item>
+        <el-form-item label="出题次数" class="form-item-sm">
+          <el-input-number v-model="form.questionCount" :min="0" :max="999" controls-position="right" />
         </el-form-item>
         <div class="form-buttons">
           <el-button type="primary" @click="handleSubmit">提交</el-button>
@@ -65,8 +82,11 @@
         <el-form-item label="工号">
           <el-input v-model="editForm.employeeId" />
         </el-form-item>
-        <el-form-item label="当前积分">
+        <el-form-item label="答题积分">
           <el-input-number v-model="editForm.totalScore" :min="0" :max="9999" controls-position="right" />
+        </el-form-item>
+        <el-form-item label="出题次数">
+          <el-input-number v-model="editForm.questionCount" :min="0" :max="9999" controls-position="right" />
         </el-form-item>
       </el-form>
       <template #footer>
@@ -85,28 +105,33 @@ import { useLeaderboardStore } from '../stores/leaderboard'
 
 const store = useLeaderboardStore()
 
-const form = reactive({ name: '', employeeId: '', points: 1 })
+const form = reactive({ name: '', employeeId: '', points: 0, questionCount: 0 })
 
 const showEditDialog = ref(false)
-const editForm = reactive({ name: '', employeeId: '', totalScore: 0 })
+const editForm = reactive({ name: '', employeeId: '', totalScore: 0, questionCount: 0 })
 const editingId = ref(null)
 
 function handleSubmit() {
   if (!form.employeeId.trim()) { ElMessage.warning('工号不能为空'); return }
   if (!form.name.trim()) { ElMessage.warning('姓名不能为空'); return }
+  if (form.points <= 0 && form.questionCount <= 0) { ElMessage.warning('答题积分和出题次数至少填一项'); return }
 
   const result = store.addScore({ ...form })
 
   if (result.nameMismatch) {
     ElMessage.warning({
-      message: `工号「${form.employeeId}」在榜单中对应姓名是「${result.player.name}」，与输入的「${form.name}」不一致，请确认是否打错了。已按榜单姓名累加积分。`,
+      message: `工号「${form.employeeId}」在榜单中对应姓名是「${result.player.name}」，与输入的「${form.name}」不一致，请确认是否打错了。已按榜单姓名累加。`,
       duration: 7000,
       showClose: true
     })
   } else if (result.status === 'created') {
-    ElMessage.success(`已新增「${result.player.name}」，积分：${form.points}`)
+    ElMessage.success(`已新增「${result.player.name}」，答题积分：${form.points}，出题次数：${form.questionCount}`)
   } else {
-    ElMessage.success(`「${result.player.name}」+${form.points} 分，当前总积分：${result.player.totalScore}`)
+    const msgs = []
+    if (form.points > 0) msgs.push(`+${form.points} 答题积分`)
+    if (form.questionCount > 0) msgs.push(`+${form.questionCount} 出题次数`)
+    const detail = msgs.length ? msgs.join('，') : '无变化'
+    ElMessage.success(`「${result.player.name}」${detail}，总得分：${result.player.totalScore + 5 * (result.player.questionCount || 0)}`)
   }
   resetForm()
 }
@@ -114,12 +139,13 @@ function handleSubmit() {
 function resetForm() {
   form.name = ''
   form.employeeId = ''
-  form.points = 1
+  form.points = 0
+  form.questionCount = 0
 }
 
 function openEdit(row) {
   editingId.value = row.id
-  Object.assign(editForm, { name: row.name, employeeId: row.employeeId, totalScore: row.totalScore })
+  Object.assign(editForm, { name: row.name, employeeId: row.employeeId, totalScore: row.totalScore, questionCount: row.questionCount || 0 })
   showEditDialog.value = true
 }
 

@@ -31,6 +31,11 @@
           <el-tag type="success" size="small">{{ row.answer }}</el-tag>
         </template>
       </el-table-column>
+      <el-table-column label="解析" min-width="180">
+        <template #default="{ row }">
+          <span class="explanation-text">{{ row.explanation || '—' }}</span>
+        </template>
+      </el-table-column>
       <el-table-column prop="creator" label="出题人" width="90" />
       <el-table-column prop="groupName" label="所属组" width="100" />
       <el-table-column label="出题日期" width="130" align="center">
@@ -98,5 +103,13 @@ function handleDelete(row) {
 .date-text {
   font-size: 13px;
   color: #606266;
+}
+
+.explanation-text {
+  font-size: 13px;
+  color: #606266;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  word-break: break-all;
 }
 </style>
