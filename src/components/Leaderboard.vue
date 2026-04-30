@@ -1,0 +1,201 @@
+<template>
+  <div>
+    <div class="section-header">
+      <span class="section-title">积分榜</span>
+    </div>
+
+    <el-table
+      :data="store.sortedPlayers"
+      border
+      stripe
+      empty-text="暂无积分记录"
+    >
+      <el-table-column label="排名" width="70" align="center">
+        <template #default="{ $index }">
+          <span v-if="$index === 0" class="medal">🥇</span>
+          <span v-else-if="$index === 1" class="medal">🥈</span>
+          <span v-else-if="$index === 2" class="medal">🥉</span>
+          <span v-else class="rank-num">{{ $index + 1 }}</span>
+        </template>
+      </el-table-column>
+      <el-table-column prop="name" label="姓名" />
+      <el-table-column prop="employeeId" label="工号" width="130" />
+      <el-table-column label="积分" width="100" align="center">
+        <template #default="{ row }">
+          <el-tag type="success" size="large" style="font-size: 15px; font-weight: 700;">
+            {{ row.totalScore }}
+          </el-tag>
+        </template>
+      </el-table-column>
+      <el-table-column label="操作" width="160" align="center">
+        <template #default="{ row }">
+          <el-button size="small" :icon="Edit" @click="openEdit(row)">编辑</el-button>
+          <el-button size="small" type="danger" :icon="Delete" @click="handleDelete(row)">删除</el-button>
+        </template>
+      </el-table-column>
+    </el-table>
+
+    <!-- Add Score Form -->
+    <el-card class="score-form-card" shadow="never">
+      <div class="score-form-title">添加 / 更新积分</div>
+      <div class="score-form-hint">以工号为唯一标识。工号已存在则累加积分；不存在则新增人员。</div>
+      <div class="score-form-row">
+        <el-form-item label="姓名" class="form-item">
+          <el-input v-model="form.name" placeholder="请输入姓名" clearable />
+        </el-form-item>
+        <el-form-item label="工号" class="form-item">
+          <el-input v-model="form.employeeId" placeholder="请输入工号" clearable />
+        </el-form-item>
+        <el-form-item label="积分" class="form-item-sm">
+          <el-input-number v-model="form.points" :min="1" :max="999" controls-position="right" />
+        </el-form-item>
+        <div class="form-buttons">
+          <el-button type="primary" @click="handleSubmit">提交</el-button>
+          <el-button @click="resetForm">重置</el-button>
+        </div>
+      </div>
+    </el-card>
+
+    <!-- Edit Dialog -->
+    <el-dialog v-model="showEditDialog" title="编辑人员信息" width="420px" align-center>
+      <el-form :model="editForm" label-width="80px">
+        <el-form-item label="姓名">
+          <el-input v-model="editForm.name" />
+        </el-form-item>
+        <el-form-item label="工号">
+          <el-input v-model="editForm.employeeId" />
+        </el-form-item>
+        <el-form-item label="当前积分">
+          <el-input-number v-model="editForm.totalScore" :min="0" :max="9999" controls-position="right" />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="showEditDialog = false">取消</el-button>
+        <el-button type="primary" @click="submitEdit">保存</el-button>
+      </template>
+    </el-dialog>
+  </div>
+</template>
+
+<script setup>
+import { ref, reactive } from 'vue'
+import { ElMessage, ElMessageBox } from 'element-plus'
+import { Edit, Delete } from '@element-plus/icons-vue'
+import { useLeaderboardStore } from '../stores/leaderboard'
+
+const store = useLeaderboardStore()
+
+const form = reactive({ name: '', employeeId: '', points: 1 })
+
+const showEditDialog = ref(false)
+const editForm = reactive({ name: '', employeeId: '', totalScore: 0 })
+const editingId = ref(null)
+
+function handleSubmit() {
+  if (!form.employeeId.trim()) { ElMessage.warning('工号不能为空'); return }
+  if (!form.name.trim()) { ElMessage.warning('姓名不能为空'); return }
+
+  const result = store.addScore({ ...form })
+
+  if (result.nameMismatch) {
+    ElMessage.warning({
+      message: `工号「${form.employeeId}」在榜单中对应姓名是「${result.player.name}」，与输入的「${form.name}」不一致，请确认是否打错了。已按榜单姓名累加积分。`,
+      duration: 7000,
+      showClose: true
+    })
+  } else if (result.status === 'created') {
+    ElMessage.success(`已新增「${result.player.name}」，积分：${form.points}`)
+  } else {
+    ElMessage.success(`「${result.player.name}」+${form.points} 分，当前总积分：${result.player.totalScore}`)
+  }
+  resetForm()
+}
+
+function resetForm() {
+  form.name = ''
+  form.employeeId = ''
+  form.points = 1
+}
+
+function openEdit(row) {
+  editingId.value = row.id
+  Object.assign(editForm, { name: row.name, employeeId: row.employeeId, totalScore: row.totalScore })
+  showEditDialog.value = true
+}
+
+function submitEdit() {
+  if (!editForm.name.trim()) { ElMessage.warning('姓名不能为空'); return }
+  if (!editForm.employeeId.trim()) { ElMessage.warning('工号不能为空'); return }
+  store.editPlayer(editingId.value, { ...editForm })
+  showEditDialog.value = false
+  ElMessage.success('修改成功')
+}
+
+function handleDelete(row) {
+  ElMessageBox.confirm(
+    `确认删除「${row.name}」（工号：${row.employeeId}）？`,
+    '删除确认',
+    { confirmButtonText: '删除', cancelButtonText: '取消', type: 'warning' }
+  ).then(() => {
+    store.deletePlayer(row.id)
+    ElMessage.success('已删除')
+  }).catch(() => {})
+}
+</script>
+
+<style scoped>
+.medal { font-size: 20px; }
+.rank-num { font-weight: 600; color: #606266; }
+
+.score-form-card {
+  margin-top: 28px;
+  background: #f8f9fb;
+  border: 1px solid #e4e7ed;
+  border-radius: 8px;
+}
+
+.score-form-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #303133;
+  margin-bottom: 4px;
+}
+
+.score-form-hint {
+  font-size: 12px;
+  color: #909399;
+  margin-bottom: 16px;
+}
+
+.score-form-row {
+  display: flex;
+  align-items: flex-end;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.form-item {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 160px;
+}
+
+.form-item-sm {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.form-item :deep(.el-form-item__label),
+.form-item-sm :deep(.el-form-item__label) {
+  font-size: 13px;
+  color: #606266;
+}
+
+.form-buttons {
+  display: flex;
+  gap: 8px;
+  padding-bottom: 1px;
+}
+</style>
