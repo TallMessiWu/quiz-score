@@ -23,9 +23,14 @@
           <span v-else style="color: #c0c4cc;">—</span>
         </template>
       </el-table-column>
-      <el-table-column label="日期" align="center">
+      <el-table-column label="日期" min-width="160" align="center">
         <template #default="{ row }">
           <span class="date-text">{{ formatDate(row.date) }}</span>
+        </template>
+      </el-table-column>
+      <el-table-column label="操作" width="90" align="center">
+        <template #default="{ row }">
+          <el-button size="small" type="danger" :icon="Delete" @click="handleDelete(row)">删除</el-button>
         </template>
       </el-table-column>
     </el-table>
@@ -33,9 +38,27 @@
 </template>
 
 <script setup>
+import { ElMessage, ElMessageBox } from 'element-plus'
+import { Delete } from '@element-plus/icons-vue'
 import { useLeaderboardStore } from '../stores/leaderboard'
 
 const store = useLeaderboardStore()
+
+function handleDelete(row) {
+  const parts = []
+  if (row.points) parts.push(`-${row.points} 答题积分`)
+  if (row.questionCount) parts.push(`-${row.questionCount} 出题次数`)
+  const detail = parts.length ? `\n\n将从「${row.playerName}」（${row.employeeId}）扣回：${parts.join('，')}` : ''
+
+  ElMessageBox.confirm(
+    `确认删除该条积分记录？${detail}`,
+    '删除确认',
+    { confirmButtonText: '删除', cancelButtonText: '取消', type: 'warning' }
+  ).then(() => {
+    store.deleteScoreHistory(row.id)
+    ElMessage.success('已删除')
+  }).catch(() => {})
+}
 
 function formatDate(iso) {
   if (!iso) return ''

@@ -54,11 +54,8 @@
       <div class="score-form-title">添加 / 更新积分</div>
       <div class="score-form-hint">以工号为唯一标识。工号已存在则累加；不存在则新增人员。总得分 = 答题积分 + 5 × 出题次数</div>
       <div class="score-form-row">
-        <el-form-item label="姓名" class="form-item">
-          <el-input v-model="form.name" placeholder="请输入姓名" clearable />
-        </el-form-item>
-        <el-form-item label="工号" class="form-item">
-          <el-input v-model="form.employeeId" placeholder="请输入工号" clearable />
+        <el-form-item label="姓名 工号" class="form-item form-item-wide">
+          <el-input v-model="form.person" placeholder="如：周翔 E2024010（用空格分隔）" clearable @keyup.enter="handleSubmit" />
         </el-form-item>
         <el-form-item label="答题积分" class="form-item-sm">
           <el-input-number v-model="form.points" :min="0" :max="999" controls-position="right" />
@@ -105,22 +102,28 @@ import { useLeaderboardStore } from '../stores/leaderboard'
 
 const store = useLeaderboardStore()
 
-const form = reactive({ name: '', employeeId: '', points: 0, questionCount: 0 })
+const form = reactive({ person: '', points: 1, questionCount: 0 })
+
+function parsePerson(input) {
+  const parts = (input || '').trim().split(/[\s　]+/).filter(Boolean)
+  if (parts.length < 2) return null
+  return { employeeId: parts[parts.length - 1], name: parts.slice(0, -1).join(' ') }
+}
 
 const showEditDialog = ref(false)
 const editForm = reactive({ name: '', employeeId: '', totalScore: 0, questionCount: 0 })
 const editingId = ref(null)
 
 function handleSubmit() {
-  if (!form.employeeId.trim()) { ElMessage.warning('工号不能为空'); return }
-  if (!form.name.trim()) { ElMessage.warning('姓名不能为空'); return }
+  const parsed = parsePerson(form.person)
+  if (!parsed) { ElMessage.warning('请按「姓名 工号」格式输入，用空格分隔'); return }
   if (form.points <= 0 && form.questionCount <= 0) { ElMessage.warning('答题积分和出题次数至少填一项'); return }
 
-  const result = store.addScore({ ...form })
+  const result = store.addScore({ name: parsed.name, employeeId: parsed.employeeId, points: form.points, questionCount: form.questionCount })
 
   if (result.nameMismatch) {
     ElMessage.warning({
-      message: `工号「${form.employeeId}」在榜单中对应姓名是「${result.player.name}」，与输入的「${form.name}」不一致，请确认是否打错了。已按榜单姓名累加。`,
+      message: `工号「${parsed.employeeId}」在榜单中对应姓名是「${result.player.name}」，与输入的「${parsed.name}」不一致，请确认是否打错了。已按榜单姓名累加。`,
       duration: 7000,
       showClose: true
     })
@@ -137,9 +140,8 @@ function handleSubmit() {
 }
 
 function resetForm() {
-  form.name = ''
-  form.employeeId = ''
-  form.points = 0
+  form.person = ''
+  form.points = 1
   form.questionCount = 0
 }
 
@@ -205,6 +207,11 @@ function handleDelete(row) {
   flex-direction: column;
   gap: 6px;
   min-width: 160px;
+}
+
+.form-item-wide {
+  flex: 1;
+  min-width: 280px;
 }
 
 .form-item-sm {

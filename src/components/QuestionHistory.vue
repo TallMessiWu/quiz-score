@@ -13,9 +13,14 @@
         <template #default="{ row }">
           <div class="question-cell">
             <span class="question-text">{{ row.content }}</span>
-            <el-button size="small" :icon="CopyDocument" @click="copyText(row.content)" style="margin-left: 8px; flex-shrink: 0;">
-              复制
-            </el-button>
+            <div class="copy-btns">
+              <el-button size="small" :icon="CopyDocument" @click="copyText(buildQuestionText(row))">
+                复制题目
+              </el-button>
+              <el-button size="small" :icon="CopyDocument" @click="copyText(buildExplanationText(row))">
+                复制解析
+              </el-button>
+            </div>
           </div>
         </template>
       </el-table-column>
@@ -56,6 +61,7 @@
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Delete, CopyDocument } from '@element-plus/icons-vue'
 import { useQuestionsStore } from '../stores/questions'
+import { buildQuestionText, buildExplanationText } from '../utils/copyFormat'
 
 const store = useQuestionsStore()
 
@@ -90,7 +96,18 @@ function handleDelete(row) {
 .question-cell {
   display: flex;
   align-items: flex-start;
+  gap: 8px;
+}
+
+.copy-btns {
+  display: flex;
+  flex-direction: column;
   gap: 4px;
+  flex-shrink: 0;
+}
+
+.copy-btns .el-button + .el-button {
+  margin-left: 0;
 }
 
 .question-text {

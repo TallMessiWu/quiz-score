@@ -73,7 +73,19 @@ export const useLeaderboardStore = defineStore('leaderboard', () => {
     if (i !== -1) { players.value.splice(i, 1); sync() }
   }
 
-  return { players, scoreHistory, sortedPlayers, init, addScore, editPlayer, deletePlayer }
+  function deleteScoreHistory(id) {
+    const i = scoreHistory.value.findIndex(s => s.id === id)
+    if (i === -1) return
+    const [entry] = scoreHistory.value.splice(i, 1)
+    const player = players.value.find(p => p.id === entry.playerId || p.employeeId === entry.employeeId)
+    if (player) {
+      player.totalScore = Math.max(0, (player.totalScore || 0) - (entry.points || 0))
+      player.questionCount = Math.max(0, (player.questionCount || 0) - (entry.questionCount || 0))
+    }
+    sync()
+  }
+
+  return { players, scoreHistory, sortedPlayers, init, addScore, editPlayer, deletePlayer, deleteScoreHistory }
 })
 
 function uid() {
