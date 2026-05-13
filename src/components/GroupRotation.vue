@@ -27,22 +27,30 @@
       <el-button type="primary" :icon="Plus" @click="showAddDialog = true">添加组</el-button>
     </div>
 
-    <el-table :data="queueGroups" border stripe empty-text="队列为空">
-      <el-table-column label="顺序" width="70" align="center">
-        <template #default="{ $index }">
-          <span class="queue-index">{{ $index + 2 }}</span>
-        </template>
-      </el-table-column>
-      <el-table-column prop="name" label="组名" />
-      <el-table-column prop="leader" label="负责人" width="120" />
-      <el-table-column prop="leaderNo" label="负责人工号" width="130" />
-      <el-table-column label="操作" width="160" align="center">
-        <template #default="{ row }">
+    <div v-if="queueGroups.length > 0" class="queue-list">
+      <div
+        v-for="(row, $index) in queueGroups"
+        :key="row.id"
+        class="queue-item"
+        :class="{ 'drag-over': dragOverIndex === $index }"
+        draggable="true"
+        @dragstart="handleDragStart($event, $index)"
+        @dragover.prevent="handleDragOver($event, $index)"
+        @drop="handleDrop($index)"
+        @dragend="handleDragEnd"
+      >
+        <span class="drag-handle" title="拖拽排序">⠿</span>
+        <span class="queue-index">{{ $index + 2 }}</span>
+        <span class="queue-name">{{ row.name }}</span>
+        <span class="queue-leader">{{ row.leader || '—' }}</span>
+        <span class="queue-leader-no">{{ row.leaderNo || '—' }}</span>
+        <span class="queue-actions">
           <el-button size="small" :icon="Edit" @click="openEdit(row)">编辑</el-button>
           <el-button size="small" type="danger" :icon="Delete" @click="handleDelete(row)">删除</el-button>
-        </template>
-      </el-table-column>
-    </el-table>
+        </span>
+      </div>
+    </div>
+    <el-empty v-else description="队列为空" style="margin: 24px 0;" />
 
     <!-- Add Dialog -->
     <el-dialog v-model="showAddDialog" title="添加组" width="480px" align-center @closed="resetAddForm">
@@ -113,6 +121,9 @@ const editLeader = ref('')
 const editLeaderNo = ref('')
 const editingId = ref(null)
 
+const dragOverIndex = ref(-1)
+let dragFromIndex = -1
+
 function resetAddForm() {
   newGroupName.value = ''
   newLeader.value = ''
@@ -159,6 +170,33 @@ function submitEdit() {
   })
   showEditDialog.value = false
   ElMessage.success('修改成功')
+}
+
+function handleDragStart(e, index) {
+  dragFromIndex = index + 1
+  e.dataTransfer.effectAllowed = 'move'
+  e.dataTransfer.setData('text/plain', '')
+  e.target.classList.add('dragging')
+}
+
+function handleDragOver(e, index) {
+  e.dataTransfer.dropEffect = 'move'
+  dragOverIndex.value = index
+}
+
+function handleDrop(toQueueIndex) {
+  dragOverIndex.value = -1
+  if (dragFromIndex < 0) return
+  const toIndex = toQueueIndex + 1
+  if (dragFromIndex === toIndex) return
+  store.moveGroup(dragFromIndex, toIndex)
+  ElMessage.success('已更新顺序')
+}
+
+function handleDragEnd(e) {
+  e.target.classList.remove('dragging')
+  dragOverIndex.value = -1
+  dragFromIndex = -1
 }
 
 function handleDelete(row) {
@@ -213,5 +251,90 @@ function handleDelete(row) {
 .queue-index {
   font-weight: 600;
   color: #606266;
+}
+
+.queue-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.queue-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 16px;
+  background: #fff;
+  border: 1px solid #e4e7ed;
+  border-radius: 6px;
+  cursor: default;
+  transition: box-shadow 0.2s, border-color 0.2s, transform 0.15s;
+}
+
+.queue-item:hover {
+  border-color: #c0c4cc;
+}
+
+.queue-item.drag-over {
+  border-color: #409eff;
+  background: #ecf5ff;
+  box-shadow: 0 0 0 1px #409eff inset;
+}
+
+.queue-item.dragging {
+  opacity: 0.45;
+  transform: scale(0.98);
+}
+
+.drag-handle {
+  cursor: grab;
+  font-size: 18px;
+  color: #c0c4cc;
+  letter-spacing: 2px;
+  user-select: none;
+  line-height: 1;
+  padding: 2px 4px;
+  border-radius: 3px;
+  transition: color 0.15s;
+}
+
+.drag-handle:hover {
+  color: #409eff;
+}
+
+.queue-item .queue-index {
+  width: 36px;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.queue-name {
+  flex: 1;
+  font-weight: 500;
+  color: #303133;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.queue-leader {
+  width: 100px;
+  color: #606266;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.queue-leader-no {
+  width: 120px;
+  color: #909399;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.queue-actions {
+  flex-shrink: 0;
+  display: flex;
+  gap: 6px;
 }
 </style>

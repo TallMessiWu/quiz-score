@@ -41,6 +41,12 @@ export const useGroupsStore = defineStore('groups', () => {
     if (i !== -1) { groups.value.splice(i, 1); sync() }
   }
 
+  function moveGroup(fromIndex, toIndex) {
+    const item = groups.value.splice(fromIndex, 1)[0]
+    groups.value.splice(toIndex, 0, item)
+    sync()
+  }
+
   function markDone() {
     if (groups.value.length > 0) {
       groups.value.push(groups.value.shift())
@@ -48,7 +54,7 @@ export const useGroupsStore = defineStore('groups', () => {
     }
   }
 
-  return { groups, init, addGroup, editGroup, deleteGroup, markDone }
+  return { groups, init, addGroup, editGroup, deleteGroup, markDone, moveGroup }
 })
 
 function uid() {
