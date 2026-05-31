@@ -47,7 +47,12 @@ export const useQuestionsStore = defineStore('questions', () => {
     if (i !== -1) { history.value.splice(i, 1); sync() }
   }
 
-  return { bank, history, init, addQuestion, editQuestion, deleteQuestion, publishQuestion, deleteHistory }
+  function editHistoryDate(id, usedAt) {
+    const q = history.value.find(q => q.id === id)
+    if (q) { q.usedAt = usedAt; sync() }
+  }
+
+  return { bank, history, init, addQuestion, editQuestion, deleteQuestion, publishQuestion, deleteHistory, editHistoryDate }
 })
 
 function uid() {

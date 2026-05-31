@@ -4,6 +4,22 @@
       <span class="section-title">积分榜</span>
     </div>
 
+    <div class="stats-bar">
+      <div class="stat-item">
+        <span class="stat-label">参与人数</span>
+        <span class="stat-value">{{ store.uniqueParticipantCount }} 人</span>
+      </div>
+      <div class="stat-item">
+        <span class="stat-label">当前期数</span>
+        <span class="stat-value">{{ store.currentEpisode != null ? `第 ${store.currentEpisode} 期` : '—' }}</span>
+      </div>
+      <div class="stat-item">
+        <span class="stat-label">赛季开始</span>
+        <span class="stat-value">{{ store.seasonStartDate || '未设置' }}</span>
+        <el-button size="small" :icon="Setting" style="margin-left: 8px;" @click="openSeasonDialog">设置</el-button>
+      </div>
+    </div>
+
     <el-table
       :data="store.sortedPlayers"
       border
@@ -70,6 +86,25 @@
       </div>
     </el-card>
 
+    <!-- Season Dialog -->
+    <el-dialog v-model="showSeasonDialog" title="设置赛季开始日期" width="360px" align-center>
+      <div style="margin-bottom: 12px; font-size: 13px; color: #909399;">
+        每周为一期，系统将根据开始日期自动计算当前期数。
+      </div>
+      <el-date-picker
+        v-model="seasonDateInput"
+        type="date"
+        placeholder="选择赛季开始日期"
+        style="width: 100%;"
+        value-format="YYYY-MM-DD"
+      />
+      <template #footer>
+        <el-button @click="showSeasonDialog = false">取消</el-button>
+        <el-button type="danger" plain @click="clearSeason">清除</el-button>
+        <el-button type="primary" @click="submitSeason">保存</el-button>
+      </template>
+    </el-dialog>
+
     <!-- Edit Dialog -->
     <el-dialog v-model="showEditDialog" title="编辑人员信息" width="420px" align-center>
       <el-form :model="editForm" label-width="80px">
@@ -97,10 +132,31 @@
 <script setup>
 import { ref, reactive } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Edit, Delete } from '@element-plus/icons-vue'
+import { Edit, Delete, Setting } from '@element-plus/icons-vue'
 import { useLeaderboardStore } from '../stores/leaderboard'
 
 const store = useLeaderboardStore()
+
+const showSeasonDialog = ref(false)
+const seasonDateInput = ref('')
+
+function openSeasonDialog() {
+  seasonDateInput.value = store.seasonStartDate || ''
+  showSeasonDialog.value = true
+}
+
+async function submitSeason() {
+  if (!seasonDateInput.value) { ElMessage.warning('请选择日期'); return }
+  await store.updateSeasonStart(seasonDateInput.value)
+  showSeasonDialog.value = false
+  ElMessage.success('赛季开始日期已更新')
+}
+
+async function clearSeason() {
+  await store.updateSeasonStart(null)
+  showSeasonDialog.value = false
+  ElMessage.success('已清除赛季设置')
+}
 
 const form = reactive({ person: '', points: 1, questionCount: 0 })
 
@@ -172,6 +228,35 @@ function handleDelete(row) {
 </script>
 
 <style scoped>
+.stats-bar {
+  display: flex;
+  gap: 24px;
+  align-items: center;
+  padding: 12px 20px;
+  background: #f5f7fa;
+  border: 1px solid #e4e7ed;
+  border-radius: 8px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+
+.stat-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.stat-label {
+  font-size: 13px;
+  color: #909399;
+}
+
+.stat-value {
+  font-size: 15px;
+  font-weight: 600;
+  color: #303133;
+}
+
 .medal { font-size: 20px; }
 .rank-num { font-weight: 600; color: #606266; }
 

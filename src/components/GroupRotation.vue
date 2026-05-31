@@ -6,7 +6,7 @@
       <div class="current-name">{{ store.groups[0].name }}</div>
       <div v-if="store.groups[0].leader" class="current-leader">
         负责人：{{ store.groups[0].leader }}
-        <span v-if="store.groups[0].leaderNo">（{{ store.groups[0].leaderNo }}）</span>
+        <span v-if="store.groups[0].leaderNo"> {{ store.groups[0].leaderNo }}</span>
       </div>
       <div class="current-actions">
         <el-button type="primary" size="large" @click="handleMarkDone">

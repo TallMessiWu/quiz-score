@@ -4,7 +4,10 @@ import { readFileSync, writeFileSync, existsSync } from 'fs'
 import { resolve } from 'path'
 
 const DATA_FILE = resolve('./data.json')
-const DEFAULT = { groups: [], bank: [], history: [], players: [], scoreHistory: [] }
+const DEFAULT = { seasonStartDate: null, groups: [], bank: [], history: [], players: [], scoreHistory: [] }
+
+const REPORT_CONFIG_FILE = resolve('./report-config.json')
+const DEFAULT_REPORT_CONFIG = { companyName: '', departmentName: '', seasonName: '', archiveUrl: '', logo: '', themeColor: '' }
 
 function readData() {
   try {
@@ -20,6 +23,22 @@ function readData() {
 
 function patchData(patch) {
   writeFileSync(DATA_FILE, JSON.stringify({ ...readData(), ...patch }, null, 2), 'utf-8')
+}
+
+function readReportConfig() {
+  try {
+    if (!existsSync(REPORT_CONFIG_FILE)) {
+      writeFileSync(REPORT_CONFIG_FILE, JSON.stringify(DEFAULT_REPORT_CONFIG, null, 2), 'utf-8')
+      return { ...DEFAULT_REPORT_CONFIG }
+    }
+    return { ...DEFAULT_REPORT_CONFIG, ...JSON.parse(readFileSync(REPORT_CONFIG_FILE, 'utf-8')) }
+  } catch {
+    return { ...DEFAULT_REPORT_CONFIG }
+  }
+}
+
+function patchReportConfig(patch) {
+  writeFileSync(REPORT_CONFIG_FILE, JSON.stringify({ ...readReportConfig(), ...patch }, null, 2), 'utf-8')
 }
 
 async function readBody(req) {
@@ -53,6 +72,18 @@ function apiPlugin() {
         if (req.method === 'PUT' && req.url === '/api/leaderboard') {
           const b = await readBody(req)
           patchData({ players: b.players, scoreHistory: b.scoreHistory })
+          return res.end('{"ok":true}')
+        }
+        if (req.method === 'PUT' && req.url === '/api/season') {
+          const b = await readBody(req)
+          patchData({ seasonStartDate: b.seasonStartDate ?? null })
+          return res.end('{"ok":true}')
+        }
+        if (req.method === 'GET' && req.url === '/api/report-config') {
+          return res.end(JSON.stringify(readReportConfig()))
+        }
+        if (req.method === 'PUT' && req.url === '/api/report-config') {
+          patchReportConfig(await readBody(req))
           return res.end('{"ok":true}')
         }
         next()

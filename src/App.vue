@@ -20,6 +20,9 @@
         <el-tab-pane label="积分历史" name="shistory">
           <ScoreHistory />
         </el-tab-pane>
+        <el-tab-pane label="周报汇总" name="weekly">
+          <WeeklyReport />
+        </el-tab-pane>
       </el-tabs>
     </main>
   </div>
@@ -32,20 +35,26 @@ import QuestionBank from './components/QuestionBank.vue'
 import QuestionHistory from './components/QuestionHistory.vue'
 import Leaderboard from './components/Leaderboard.vue'
 import ScoreHistory from './components/ScoreHistory.vue'
+import WeeklyReport from './components/WeeklyReport.vue'
 import { useGroupsStore } from './stores/groups'
 import { useQuestionsStore } from './stores/questions'
 import { useLeaderboardStore } from './stores/leaderboard'
+import { useReportConfigStore } from './stores/reportConfig'
 
 const activeTab = ref('rotation')
 const groupsStore = useGroupsStore()
 const questionsStore = useQuestionsStore()
 const leaderboardStore = useLeaderboardStore()
+const reportConfigStore = useReportConfigStore()
 
 onMounted(async () => {
   const data = await fetch('/api/data').then(r => r.json())
   groupsStore.init(data)
   questionsStore.init(data)
   leaderboardStore.init(data)
+
+  const cfg = await fetch('/api/report-config').then(r => r.json())
+  reportConfigStore.init(cfg)
 })
 </script>
 

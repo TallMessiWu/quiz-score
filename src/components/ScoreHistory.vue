@@ -7,6 +7,21 @@
       </span>
     </div>
 
+    <div class="stats-bar">
+      <div class="stat-item">
+        <span class="stat-label">参与人数</span>
+        <span class="stat-value">{{ store.uniqueParticipantCount }} 人</span>
+      </div>
+      <div class="stat-item">
+        <span class="stat-label">当前期数</span>
+        <span class="stat-value">{{ store.currentEpisode != null ? `第 ${store.currentEpisode} 期` : '—' }}</span>
+      </div>
+      <div class="stat-item">
+        <span class="stat-label">赛季开始</span>
+        <span class="stat-value">{{ store.seasonStartDate || '未设置' }}</span>
+      </div>
+    </div>
+
     <el-table :data="store.scoreHistory" border stripe empty-text="暂无积分历史记录">
       <el-table-column type="index" label="#" width="60" align="center" />
       <el-table-column prop="playerName" label="姓名" width="120" />
@@ -73,6 +88,35 @@ function formatDate(iso) {
 </script>
 
 <style scoped>
+.stats-bar {
+  display: flex;
+  gap: 24px;
+  align-items: center;
+  padding: 12px 20px;
+  background: #f5f7fa;
+  border: 1px solid #e4e7ed;
+  border-radius: 8px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+
+.stat-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.stat-label {
+  font-size: 13px;
+  color: #909399;
+}
+
+.stat-value {
+  font-size: 15px;
+  font-weight: 600;
+  color: #303133;
+}
+
 .date-text {
   font-size: 13px;
   color: #606266;

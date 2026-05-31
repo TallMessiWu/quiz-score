@@ -4,6 +4,7 @@ import { ref, computed } from 'vue'
 export const useLeaderboardStore = defineStore('leaderboard', () => {
   const players = ref([])
   const scoreHistory = ref([])
+  const seasonStartDate = ref(null)
 
   const sortedPlayers = computed(() =>
     [...players.value].sort((a, b) => {
@@ -13,9 +14,31 @@ export const useLeaderboardStore = defineStore('leaderboard', () => {
     })
   )
 
+  const uniqueParticipantCount = computed(() => players.value.length)
+
+  const currentEpisode = computed(() => {
+    if (!seasonStartDate.value) return null
+    const startDay = new Date(seasonStartDate.value)
+    startDay.setHours(0, 0, 0, 0)
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+    const diffMs = today - startDay
+    return diffMs < 0 ? 1 : Math.floor(diffMs / (7 * 24 * 60 * 60 * 1000)) + 1
+  })
+
   function init(data) {
     players.value = data.players ?? []
     scoreHistory.value = data.scoreHistory ?? []
+    seasonStartDate.value = data.seasonStartDate ?? null
+  }
+
+  async function updateSeasonStart(date) {
+    seasonStartDate.value = date ?? null
+    await fetch('/api/season', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ seasonStartDate: date ?? null }),
+    })
   }
 
   async function sync() {
@@ -85,7 +108,7 @@ export const useLeaderboardStore = defineStore('leaderboard', () => {
     sync()
   }
 
-  return { players, scoreHistory, sortedPlayers, init, addScore, editPlayer, deletePlayer, deleteScoreHistory }
+  return { players, scoreHistory, seasonStartDate, sortedPlayers, uniqueParticipantCount, currentEpisode, init, addScore, editPlayer, deletePlayer, deleteScoreHistory, updateSeasonStart }
 })
 
 function uid() {
