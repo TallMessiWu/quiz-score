@@ -1,4 +1,4 @@
-import { defineStore } from 'pinia'
+import { defineStore, acceptHMRUpdate } from 'pinia'
 import { ref } from 'vue'
 
 export const useQuestionsStore = defineStore('questions', () => {
@@ -57,4 +57,9 @@ export const useQuestionsStore = defineStore('questions', () => {
 
 function uid() {
   return `${Date.now()}_${Math.random().toString(36).slice(2, 6)}`
+}
+
+// 让 Pinia 在 Vite 热更新时保留 state，避免改 store 后内存数据被重置为初始值
+if (import.meta.hot) {
+  import.meta.hot.accept(acceptHMRUpdate(useQuestionsStore, import.meta.hot))
 }

@@ -1,4 +1,4 @@
-import { defineStore } from 'pinia'
+import { defineStore, acceptHMRUpdate } from 'pinia'
 import { ref, computed } from 'vue'
 
 export const useLeaderboardStore = defineStore('leaderboard', () => {
@@ -15,6 +15,42 @@ export const useLeaderboardStore = defineStore('leaderboard', () => {
   )
 
   const uniqueParticipantCount = computed(() => players.value.length)
+
+  // 当赛季榜单：从积分明细中筛选「赛季开始日期」之后的记录，按工号聚合。
+  // 未设赛季开始日期时，等同于全部明细的聚合。姓名以 players 表的最新值为准。
+  const seasonPlayers = computed(() => {
+    const start = seasonStartDate.value
+    const startTs = start ? new Date(`${start}T00:00:00`).getTime() : -Infinity
+    const agg = new Map()
+    for (const h of scoreHistory.value) {
+      const t = h.date ? new Date(h.date).getTime() : 0
+      if (t < startTs) continue
+      const key = h.employeeId || h.playerId
+      if (!key) continue
+      let item = agg.get(key)
+      if (!item) {
+        const p = players.value.find(p => p.employeeId === key)
+        item = {
+          id: p?.id ?? h.playerId ?? key,
+          employeeId: h.employeeId ?? p?.employeeId ?? '',
+          name: p?.name ?? h.playerName ?? '',
+          totalScore: 0,
+          questionCount: 0,
+        }
+        agg.set(key, item)
+      }
+      item.totalScore += Number(h.points) || 0
+      item.questionCount += Number(h.questionCount) || 0
+    }
+    return [...agg.values()].sort((a, b) => {
+      const at = a.totalScore + 5 * a.questionCount
+      const bt = b.totalScore + 5 * b.questionCount
+      return bt - at
+    })
+  })
+
+  // 当赛季参与人数（赛季内有得分明细的人数）
+  const seasonParticipantCount = computed(() => seasonPlayers.value.length)
 
   const currentEpisode = computed(() => {
     if (!seasonStartDate.value) return null
@@ -96,6 +132,14 @@ export const useLeaderboardStore = defineStore('leaderboard', () => {
     if (i !== -1) { players.value.splice(i, 1); sync() }
   }
 
+  // 编辑积分明细（目前用于修正日期，从而影响当赛季归属；不改动 points 故不影响累计总分）
+  function editScoreHistory(id, patch) {
+    const entry = scoreHistory.value.find(s => s.id === id)
+    if (!entry) return
+    Object.assign(entry, patch)
+    sync()
+  }
+
   function deleteScoreHistory(id) {
     const i = scoreHistory.value.findIndex(s => s.id === id)
     if (i === -1) return
@@ -108,9 +152,14 @@ export const useLeaderboardStore = defineStore('leaderboard', () => {
     sync()
   }
 
-  return { players, scoreHistory, seasonStartDate, sortedPlayers, uniqueParticipantCount, currentEpisode, init, addScore, editPlayer, deletePlayer, deleteScoreHistory, updateSeasonStart }
+  return { players, scoreHistory, seasonStartDate, sortedPlayers, seasonPlayers, uniqueParticipantCount, seasonParticipantCount, currentEpisode, init, addScore, editPlayer, deletePlayer, editScoreHistory, deleteScoreHistory, updateSeasonStart }
 })
 
 function uid() {
   return `${Date.now()}_${Math.random().toString(36).slice(2, 6)}`
+}
+
+// 让 Pinia 在 Vite 热更新时保留 state，避免改 store 后内存数据被重置为初始值
+if (import.meta.hot) {
+  import.meta.hot.accept(acceptHMRUpdate(useLeaderboardStore, import.meta.hot))
 }

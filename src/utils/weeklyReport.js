@@ -40,6 +40,17 @@ function typeLabel(type) {
   return type === 'multiple' ? '多选' : '单选'
 }
 
+// 期数文本：单期显示「第 X 期」，跨期显示「第 X ~ Y 期」
+export function episodeText(episode, episodeEnd = null) {
+  if (episode == null) return '—'
+  if (episodeEnd != null && episodeEnd !== episode) {
+    const lo = Math.min(episode, episodeEnd)
+    const hi = Math.max(episode, episodeEnd)
+    return `第 ${lo} ~ ${hi} 期`
+  }
+  return `第 ${episode} 期`
+}
+
 // ---- 主色派生 ----
 function hexToRgb(hex) {
   const h = hex.replace('#', '')
@@ -248,8 +259,9 @@ function renderLeaderboard(topPlayers, palette, seasonName) {
 }
 
 // 赛季统计条
-function renderStats(palette, episode, participantCount, totalQuestionCount, seasonName) {
+function renderStats(palette, episode, episodeEnd, participantCount, totalQuestionCount, seasonName) {
   const title = seasonName ? `${escapeHtml(seasonName)}概览` : '赛季概览'
+  const isRange = episode != null && episodeEnd != null && episodeEnd !== episode
   const stat = (label, value, withBorder = true) => `
     <td width="33%" style="padding:14px 6px;text-align:center;${withBorder ? `border-right:1px solid ${BORDER};` : ''}">
       <div style="font-size:23px;font-weight:700;color:${palette.primary};letter-spacing:0.5px;">${value}</div>
@@ -262,7 +274,7 @@ function renderStats(palette, episode, participantCount, totalQuestionCount, sea
       <div style="margin-bottom:14px;">${sectionTitle(title, palette)}</div>
       <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:${SOFT};border:1px solid ${BORDER};border-radius:6px;">
         <tr>
-          ${stat('当前期数', episode != null ? `第 ${episode} 期` : '—')}
+          ${stat(isRange ? '覆盖期数' : '当前期数', episodeText(episode, episodeEnd))}
           ${stat('累计参与', `${participantCount} 人`)}
           ${stat('累计出题', `${totalQuestionCount} 道`, false)}
         </tr>
@@ -308,7 +320,8 @@ function renderFooter(config) {
  * @param {Array}  opts.questions          本周入选题目（已按 usedAt 升序）
  * @param {Array}  opts.topPlayers         TOP10 玩家（已按总得分降序）
  * @param {Object} opts.config             { companyName, departmentName, seasonName, archiveUrl, logo, themeColor }
- * @param {number|null} opts.episode       当前期数
+ * @param {number|null} opts.episode       起始期数
+ * @param {number|null} opts.episodeEnd    结束期数（跨多期时显示「第 X ~ Y 期」）
  * @param {number} opts.participantCount   参与人数
  * @param {number} opts.totalQuestionCount 累计出题数
  * @param {string|null} opts.seasonStartDate 赛季开始日期
@@ -320,6 +333,7 @@ export function buildReportHtml({
   topPlayers = [],
   config = {},
   episode = null,
+  episodeEnd = null,
   participantCount = 0,
   totalQuestionCount = 0,
   seasonStartDate = null,
@@ -347,7 +361,7 @@ export function buildReportHtml({
         ${renderIntro(config, palette, seasonStartDate)}
         ${renderQuestions(questions, palette)}
         ${renderLeaderboard(topPlayers, palette, config.seasonName)}
-        ${renderStats(palette, episode, participantCount, totalQuestionCount, config.seasonName)}
+        ${renderStats(palette, episode, episodeEnd, participantCount, totalQuestionCount, config.seasonName)}
         ${renderArchive(config, palette)}
         ${renderFooter(config)}
       </table>

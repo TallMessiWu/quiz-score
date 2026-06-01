@@ -138,7 +138,7 @@ import { DocumentCopy, Download, Upload, Check } from '@element-plus/icons-vue'
 import { useQuestionsStore } from '../stores/questions'
 import { useLeaderboardStore } from '../stores/leaderboard'
 import { useReportConfigStore } from '../stores/reportConfig'
-import { buildReportHtml } from '../utils/weeklyReport'
+import { buildReportHtml, episodeText } from '../utils/weeklyReport'
 
 const questionsStore = useQuestionsStore()
 const leaderboardStore = useLeaderboardStore()
@@ -242,22 +242,28 @@ const reportQuestions = computed(() =>
   [...selected.value].sort((a, b) => new Date(a.usedAt) - new Date(b.usedAt))
 )
 
-const topPlayers = computed(() => leaderboardStore.sortedPlayers.slice(0, 10))
+// 周报榜单展示当赛季 TOP10（与积分榜「当赛季」一致），而非历史累计
+const topPlayers = computed(() => leaderboardStore.seasonPlayers.slice(0, 10))
+
+// 期数按日期计算（自赛季开始每 7 天一期），而非按今天
+function episodeOf(dateStr) {
+  const start = leaderboardStore.seasonStartDate
+  if (!start || !dateStr) return null
+  const startDay = new Date(`${start}T00:00:00`).setHours(0, 0, 0, 0)
+  const ref = new Date(`${dateStr}T00:00:00`).setHours(0, 0, 0, 0)
+  const diffMs = ref - startDay
+  return diffMs < 0 ? 1 : Math.floor(diffMs / (7 * 24 * 60 * 60 * 1000)) + 1
+}
+
+// 按所选范围的起止日各算一个期数；跨多期时展示「第 X ~ Y 期」
+const episodeStart = computed(() => episodeOf((weekRange.value || [])[0]))
+const episodeEnd = computed(() => episodeOf((weekRange.value || [])[1]))
 
 const weekLabel = computed(() => {
   const [s, e] = weekRange.value || []
-  return s && e ? `${s} ~ ${e}` : ''
-})
-
-// 期数按所选周期的起始日计算（每 7 天一期），而非按今天
-const weekEpisode = computed(() => {
-  const start = leaderboardStore.seasonStartDate
-  const [s] = weekRange.value || []
-  if (!start || !s) return null
-  const startDay = new Date(`${start}T00:00:00`).setHours(0, 0, 0, 0)
-  const ref = new Date(`${s}T00:00:00`).setHours(0, 0, 0, 0)
-  const diffMs = ref - startDay
-  return diffMs < 0 ? 1 : Math.floor(diffMs / (7 * 24 * 60 * 60 * 1000)) + 1
+  if (!s || !e) return ''
+  const ep = episodeText(episodeStart.value, episodeEnd.value)
+  return ep === '—' ? `${s} ~ ${e}` : `${s} ~ ${e}（${ep}）`
 })
 
 const reportHtml = computed(() =>
@@ -273,7 +279,8 @@ const reportHtml = computed(() =>
       themeColor: configStore.themeColor,
     },
     themeColor: configStore.themeColor,
-    episode: weekEpisode.value,
+    episode: episodeStart.value,
+    episodeEnd: episodeEnd.value,
     participantCount: leaderboardStore.uniqueParticipantCount,
     totalQuestionCount: questionsStore.history.length,
     seasonStartDate: leaderboardStore.seasonStartDate,

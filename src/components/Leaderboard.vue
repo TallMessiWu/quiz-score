@@ -20,11 +20,20 @@
       </div>
     </div>
 
+    <el-radio-group v-model="boardTab" class="board-switch">
+      <el-radio-button value="season">当赛季榜单（{{ store.seasonParticipantCount }} 人）</el-radio-button>
+      <el-radio-button value="total">历史总积分（{{ store.uniqueParticipantCount }} 人）</el-radio-button>
+    </el-radio-group>
+
+    <div v-if="boardTab === 'season'" class="board-tip">
+      当赛季积分根据「赛季开始日期」（{{ store.seasonStartDate || '未设置，默认统计全部' }}）自动从积分明细统计。如归属有误，请到「积分历史」中编辑对应明细的日期。
+    </div>
+
     <el-table
-      :data="store.sortedPlayers"
+      :data="boardData"
       border
       stripe
-      empty-text="暂无积分记录"
+      :empty-text="boardTab === 'season' ? '当赛季暂无积分记录' : '暂无积分记录'"
     >
       <el-table-column label="排名" width="70" align="center">
         <template #default="{ $index }">
@@ -57,7 +66,7 @@
           </el-tag>
         </template>
       </el-table-column>
-      <el-table-column label="操作" width="160" align="center">
+      <el-table-column v-if="boardTab === 'total'" label="操作" width="160" align="center">
         <template #default="{ row }">
           <el-button size="small" :icon="Edit" @click="openEdit(row)">编辑</el-button>
           <el-button size="small" type="danger" :icon="Delete" @click="handleDelete(row)">删除</el-button>
@@ -130,12 +139,16 @@
 </template>
 
 <script setup>
-import { ref, reactive } from 'vue'
+import { ref, reactive, computed } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Edit, Delete, Setting } from '@element-plus/icons-vue'
 import { useLeaderboardStore } from '../stores/leaderboard'
 
 const store = useLeaderboardStore()
+
+// 榜单切换：season=当赛季（按明细聚合）/ total=历史总积分（累计）
+const boardTab = ref('season')
+const boardData = computed(() => boardTab.value === 'season' ? store.seasonPlayers : store.sortedPlayers)
 
 const showSeasonDialog = ref(false)
 const seasonDateInput = ref('')
@@ -255,6 +268,20 @@ function handleDelete(row) {
   font-size: 15px;
   font-weight: 600;
   color: #303133;
+}
+
+.board-switch {
+  margin-bottom: 12px;
+}
+
+.board-tip {
+  font-size: 12px;
+  color: #909399;
+  background: #f5f7fa;
+  border: 1px solid #e4e7ed;
+  border-radius: 6px;
+  padding: 8px 12px;
+  margin-bottom: 12px;
 }
 
 .medal { font-size: 20px; }

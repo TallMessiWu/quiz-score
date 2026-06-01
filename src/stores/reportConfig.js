@@ -1,4 +1,4 @@
-import { defineStore } from 'pinia'
+import { defineStore, acceptHMRUpdate } from 'pinia'
 import { ref } from 'vue'
 
 export const useReportConfigStore = defineStore('reportConfig', () => {
@@ -47,3 +47,8 @@ export const useReportConfigStore = defineStore('reportConfig', () => {
 
   return { companyName, departmentName, seasonName, archiveUrl, logo, themeColor, init, sync, save }
 })
+
+// 让 Pinia 在 Vite 热更新时保留 state，避免改 store 后内存数据被重置为初始值
+if (import.meta.hot) {
+  import.meta.hot.accept(acceptHMRUpdate(useReportConfigStore, import.meta.hot))
+}
