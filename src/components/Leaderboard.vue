@@ -7,7 +7,7 @@
     <div class="stats-bar">
       <div class="stat-item">
         <span class="stat-label">参与人数</span>
-        <span class="stat-value">{{ store.uniqueParticipantCount }} 人</span>
+        <span class="stat-value">{{ boardTab === 'season' ? store.seasonParticipantCount : store.uniqueParticipantCount }} 人</span>
       </div>
       <div class="stat-item">
         <span class="stat-label">当前期数</span>

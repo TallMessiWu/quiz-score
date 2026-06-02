@@ -266,6 +266,17 @@ const weekLabel = computed(() => {
   return ep === '—' ? `${s} ~ ${e}` : `${s} ~ ${e}（${ep}）`
 })
 
+// 当赛季累计出题数（与当赛季榜单口径一致）
+const seasonQuestionCount = computed(() => {
+  const start = leaderboardStore.seasonStartDate
+  if (!start) return questionsStore.history.length
+  const startTs = new Date(`${start}T00:00:00`).getTime()
+  return questionsStore.history.filter(q => {
+    if (!q.usedAt) return false
+    return new Date(q.usedAt).getTime() >= startTs
+  }).length
+})
+
 const reportHtml = computed(() =>
   buildReportHtml({
     questions: reportQuestions.value,
@@ -281,8 +292,8 @@ const reportHtml = computed(() =>
     themeColor: configStore.themeColor,
     episode: episodeStart.value,
     episodeEnd: episodeEnd.value,
-    participantCount: leaderboardStore.uniqueParticipantCount,
-    totalQuestionCount: questionsStore.history.length,
+    participantCount: leaderboardStore.seasonParticipantCount,
+    totalQuestionCount: seasonQuestionCount.value,
     seasonStartDate: leaderboardStore.seasonStartDate,
     weekLabel: weekLabel.value,
   })
