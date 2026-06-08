@@ -148,22 +148,38 @@ const activePanels = ref([])
 const tableRef = ref(null)
 
 // ---- 配置表单（与 store 双向同步：store 异步加载完成后回填，保存时写回） ----
-const form = reactive({ companyName: '', departmentName: '', seasonName: '', archiveUrl: '', logo: '', themeColor: '' })
+const form = reactive({ companyName: '', departmentName: '', seasonName: '', archiveUrl: '', logo: '', logoRatio: 0, themeColor: '' })
 
 // 主题色预设（默认华为红）
 const themePresets = ['#C7000B', '#0e3d66', '#15539e', '#1f7a3d', '#7b1fa2', '#e6a23c', '#303133']
 
 watch(
-  () => [configStore.companyName, configStore.departmentName, configStore.seasonName, configStore.archiveUrl, configStore.logo, configStore.themeColor],
-  ([c, d, s, a, l, t]) => {
+  () => [configStore.companyName, configStore.departmentName, configStore.seasonName, configStore.archiveUrl, configStore.logo, configStore.logoRatio, configStore.themeColor],
+  ([c, d, s, a, l, r, t]) => {
     form.companyName = c
     form.departmentName = d
     form.seasonName = s
     form.archiveUrl = a
     form.logo = l
+    form.logoRatio = Number(r) || 0
     form.themeColor = t
   },
   { immediate: true }
+)
+
+// Logo 变化时测量真实宽高比（宽/高），供邮件 HTML 锁定尺寸，避免 Outlook 拉伸变形。
+// 跨域 URL 也能拿到 naturalWidth/Height（仅像素数据受同源限制，尺寸不受限）。
+watch(
+  () => form.logo,
+  (src) => {
+    if (!src) { form.logoRatio = 0; return }
+    const img = new Image()
+    img.onload = () => {
+      if (img.naturalHeight > 0) form.logoRatio = img.naturalWidth / img.naturalHeight
+    }
+    img.onerror = () => { form.logoRatio = 0 }
+    img.src = src
+  }
 )
 
 function onLogoChange(file) {
@@ -183,6 +199,7 @@ async function saveConfig() {
     seasonName: form.seasonName.trim(),
     archiveUrl: form.archiveUrl.trim(),
     logo: form.logo,
+    logoRatio: form.logoRatio || 0,
     themeColor: form.themeColor || '',
   })
   ElMessage.success('配置已保存')
@@ -287,6 +304,7 @@ const reportHtml = computed(() =>
       seasonName: configStore.seasonName,
       archiveUrl: configStore.archiveUrl,
       logo: configStore.logo,
+      logoRatio: configStore.logoRatio,
       themeColor: configStore.themeColor,
     },
     themeColor: configStore.themeColor,

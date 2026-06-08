@@ -91,6 +91,22 @@ function sectionTitle(text, palette, extra = '') {
   return `<div style="font-size:16px;font-weight:600;color:${TEXT};border-left:3px solid ${palette.primary};padding-left:10px;letter-spacing:0.5px;">${text}${suffix}</div>`
 }
 
+// Logo 单元格。
+// Outlook（Word 引擎）忽略 CSS 的 max-height / width:auto，只认 <img> 的
+// width / height 属性。因此固定显示高度 42px，并按真实宽高比（logoRatio = 宽/高）
+// 算出像素宽度，width / height 双属性一起给，避免被拉伸变形；无比例时退化为只给高度。
+const LOGO_HEIGHT = 42
+function renderLogoCell(config, palette) {
+  if (config.logo) {
+    const ratio = Number(config.logoRatio)
+    const dims = ratio > 0
+      ? `width="${Math.round(LOGO_HEIGHT * ratio)}" height="${LOGO_HEIGHT}"`
+      : `height="${LOGO_HEIGHT}"`
+    return `<img src="${escapeHtml(config.logo)}" alt="logo" ${dims} style="display:block;border:0;outline:none;text-decoration:none;" />`
+  }
+  return `<table role="presentation" cellpadding="0" cellspacing="0" border="0"><tr><td style="border:1px solid rgba(255,255,255,0.45);border-radius:4px;padding:9px 16px;font-size:12px;color:${palette.subtle};letter-spacing:2px;">LOGO</td></tr></table>`
+}
+
 // 页眉：主色实色，含公司名 / 部门名 / 主标题 / 周期 / Logo
 function renderHeader(config, palette, weekLabel) {
   const company = config.companyName ? escapeHtml(config.companyName) : ''
@@ -103,9 +119,7 @@ function renderHeader(config, palette, weekLabel) {
 
   const titleSuffix = dept ? `${dept}业务快答 · 每周汇总` : '业务快答 · 每周汇总'
 
-  const logoCell = config.logo
-    ? `<img src="${escapeHtml(config.logo)}" alt="logo" width="120" style="display:block;max-height:46px;width:auto;border:0;outline:none;text-decoration:none;" />`
-    : `<table role="presentation" cellpadding="0" cellspacing="0" border="0"><tr><td style="border:1px solid rgba(255,255,255,0.45);border-radius:4px;padding:9px 16px;font-size:12px;color:${palette.subtle};letter-spacing:2px;">LOGO</td></tr></table>`
+  const logoCell = renderLogoCell(config, palette)
 
   const subParts = []
   if (config.seasonName) subParts.push(escapeHtml(config.seasonName))
@@ -116,7 +130,7 @@ function renderHeader(config, palette, weekLabel) {
 
   return `
   <tr>
-    <td style="background-color:${palette.headerBg};padding:24px 28px;border-bottom:3px solid ${palette.headerLine};">
+    <td bgcolor="${palette.headerBg}" style="background-color:${palette.headerBg};padding:24px 28px;border-bottom:3px solid ${palette.headerLine};">
       <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
         <tr>
           <td style="vertical-align:middle;">
@@ -180,10 +194,10 @@ function renderQuestions(questions, palette) {
     const meta = `${formatDate(q.usedAt)} ｜ ${typeLabel(q.type)} ｜ ${escapeHtml(q.groupName || '')} · ${escapeHtml(q.creator || '')}`
     const explanation = (q.explanation && q.explanation.trim()) ? escapeHtml(q.explanation.trim()) : '（暂无解析）'
     return `
-      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:14px;background:${CARD_BG};border:1px solid ${BORDER};border-radius:6px;">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="${CARD_BG}" style="margin-bottom:14px;background:${CARD_BG};border:1px solid ${BORDER};border-radius:6px;">
         <tr><td style="padding:0;">
           <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
-            <tr><td style="background:${SOFT};padding:8px 16px;border-bottom:1px solid ${BORDER};border-radius:6px 6px 0 0;">
+            <tr><td bgcolor="${SOFT}" style="background:${SOFT};padding:8px 16px;border-bottom:1px solid ${BORDER};border-radius:6px 6px 0 0;">
               <span style="font-size:13px;font-weight:600;color:${TEXT};">第 ${idx + 1} 题</span>
               <span style="font-size:12px;color:${MUTED};margin-left:10px;">${meta}</span>
             </td></tr>
@@ -214,7 +228,7 @@ function renderLeaderboard(topPlayers, palette, seasonName) {
   const title = seasonName ? `${escapeHtml(seasonName)}积分榜` : '当前赛季积分榜'
 
   const th = (txt, align = 'center', width = '') =>
-    `<th style="padding:10px 8px;font-size:12px;font-weight:600;color:#ffffff;text-align:${align};border-right:1px solid rgba(255,255,255,0.18);${width}">${txt}</th>`
+    `<th bgcolor="${palette.headerBg}" style="padding:10px 8px;font-size:12px;font-weight:600;color:#ffffff;text-align:${align};background-color:${palette.headerBg};border-right:1px solid rgba(255,255,255,0.18);${width}">${txt}</th>`
 
   // 前三名序号着色（金 / 银 / 铜），保持中性，不随主题变化
   const rankColors = ['#b8860b', '#6b7785', '#a0673b']
@@ -228,9 +242,9 @@ function renderLeaderboard(topPlayers, palette, seasonName) {
     } else {
       rankCell = `<span style="color:${SUB};">${i + 1}</span>`
     }
-    const zebra = i % 2 === 1 ? `background:${SOFT};` : ''
+    const zebra = i % 2 === 1
     return `
-      <tr style="${zebra}">
+      <tr${zebra ? ` bgcolor="${SOFT}"` : ''} style="${zebra ? `background:${SOFT};` : ''}">
         <td style="padding:9px 8px;font-size:13px;text-align:center;border-bottom:1px solid ${BORDER};border-right:1px solid ${BORDER};">${rankCell}</td>
         <td style="padding:9px 12px;font-size:13px;color:${TEXT};text-align:left;border-bottom:1px solid ${BORDER};border-right:1px solid ${BORDER};">${escapeHtml(p.name || '')}</td>
         <td style="padding:9px 8px;font-size:13px;color:${SUB};text-align:center;border-bottom:1px solid ${BORDER};border-right:1px solid ${BORDER};">${p.totalScore || 0}</td>
@@ -244,7 +258,7 @@ function renderLeaderboard(topPlayers, palette, seasonName) {
     <td style="padding:24px 28px 4px;">
       <div style="margin-bottom:14px;">${sectionTitle(title, palette, 'TOP 10')}</div>
       <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;border:1px solid ${HEAD_BORDER};">
-        <tr style="background:${palette.headerBg};">
+        <tr bgcolor="${palette.headerBg}" style="background:${palette.headerBg};">
           ${th('排名', 'center', 'width:56px;')}
           ${th('姓名', 'left')}
           ${th('答题分', 'center', 'width:72px;')}
@@ -272,7 +286,7 @@ function renderStats(palette, episode, episodeEnd, participantCount, totalQuesti
   <tr>
     <td style="padding:24px 28px 8px;">
       <div style="margin-bottom:14px;">${sectionTitle(title, palette)}</div>
-      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:${SOFT};border:1px solid ${BORDER};border-radius:6px;">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="${SOFT}" style="background:${SOFT};border:1px solid ${BORDER};border-radius:6px;">
         <tr>
           ${stat(isRange ? '覆盖期数' : '当前期数', episodeText(episode, episodeEnd))}
           ${stat('累计参与', `${participantCount} 人`)}
@@ -288,15 +302,25 @@ function renderArchive(config, palette) {
   if (config.archiveUrl) {
     return `
     <tr>
-      <td style="padding:18px 28px 8px;text-align:center;">
-        <a href="${escapeHtml(config.archiveUrl)}" style="display:inline-block;padding:11px 26px;background:${palette.headerBg};color:#ffffff;font-size:13px;font-weight:600;text-decoration:none;border-radius:4px;letter-spacing:1px;">查看往期题目归档 &rsaquo;</a>
+      <td align="center" style="padding:18px 28px 8px;text-align:center;">
+        <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:0 auto;">
+          <tr>
+            <td bgcolor="${palette.headerBg}" style="background:${palette.headerBg};border-radius:4px;">
+              <a href="${escapeHtml(config.archiveUrl)}" style="display:inline-block;padding:11px 26px;color:#ffffff;font-size:13px;font-weight:600;text-decoration:none;letter-spacing:1px;">查看往期题目归档 &rsaquo;</a>
+            </td>
+          </tr>
+        </table>
       </td>
     </tr>`
   }
   return `
     <tr>
-      <td style="padding:18px 28px 8px;text-align:center;">
-        <span style="display:inline-block;padding:11px 26px;background:${SOFT};color:${MUTED};font-size:13px;border:1px solid ${BORDER};border-radius:4px;letter-spacing:1px;">往期题目归档（链接待配置）</span>
+      <td align="center" style="padding:18px 28px 8px;text-align:center;">
+        <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:0 auto;">
+          <tr>
+            <td bgcolor="${SOFT}" style="background:${SOFT};border:1px solid ${BORDER};border-radius:4px;padding:11px 26px;font-size:13px;color:${MUTED};letter-spacing:1px;">往期题目归档（链接待配置）</td>
+          </tr>
+        </table>
       </td>
     </tr>`
 }
@@ -308,7 +332,7 @@ function renderFooter(config) {
   if (!sign) return ''
   return `
   <tr>
-    <td style="padding:20px 28px 26px;text-align:center;border-top:1px solid ${BORDER};background:${SOFT};">
+    <td bgcolor="${SOFT}" style="padding:20px 28px 26px;text-align:center;border-top:1px solid ${BORDER};background:${SOFT};">
       <div style="font-size:11px;color:${MUTED};line-height:1.8;">${sign}</div>
     </td>
   </tr>`
@@ -353,10 +377,10 @@ export function buildReportHtml({
 <title>${docTitle}</title>
 </head>
 <body style="margin:0;padding:0;background:${BG};">
-<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:${BG};padding:24px 0;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="${BG}" style="background:${BG};padding:24px 0;">
   <tr>
     <td align="center">
-      <table role="presentation" width="640" cellpadding="0" cellspacing="0" border="0" style="width:640px;max-width:640px;background:${CARD_BG};border:1px solid ${HEAD_BORDER};border-radius:8px;overflow:hidden;font-family:'PingFang SC','Microsoft YaHei','Segoe UI',sans-serif;">
+      <table role="presentation" width="640" cellpadding="0" cellspacing="0" border="0" bgcolor="${CARD_BG}" style="width:640px;max-width:640px;background:${CARD_BG};border:1px solid ${HEAD_BORDER};border-radius:8px;overflow:hidden;font-family:'PingFang SC','Microsoft YaHei','Segoe UI',sans-serif;">
         ${renderHeader(config, palette, weekLabel)}
         ${renderIntro(config, palette, seasonStartDate)}
         ${renderQuestions(questions, palette)}
